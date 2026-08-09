@@ -31,17 +31,17 @@ st.set_page_config(
 # Constants
 # ═══════════════════════════════════════════════════════
 
-CHUNK_SIZE = 1024
-CHUNK_OVERLAP = 200
+CHUNK_SIZE = 1280
+CHUNK_OVERLAP = 250
 LLM_MODEL_NAME = "Qwen/Qwen2.5-1.5B-Instruct"
 EMBED_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 SUGGESTIONS = {
-    ":material/help: Summarize this paper": "Summarize the key findings of this paper",
-    ":material/build: What are the methods used?": "What methods or techniques are used in this paper?",
-    ":material/lightbulb: What are the main contributions?": "What are the main contributions of this paper?",
-    ":material/bar_chart: Show me key results": "What are the key results and findings of this paper?",
+    ":material/help: Summarize this paper": "Can you Summarize the given paper and key findings of this paper",
+    ":material/build: What are the methods used?": "Can you explain me what are the methods or techniques that are used in this paper?",
+    ":material/lightbulb: What are the main contributions?": "Can you explain What are the main contributions of this paper?",
+    ":material/bar_chart: Show me key results": "can you tell me What are the key results and findings of this paper?",
 }
 
 
@@ -152,6 +152,26 @@ if "pdf_text" not in st.session_state:
 if "paper_names" not in st.session_state:
     st.session_state.paper_names = []
 
+
+# ═══════════════════════════════════════════════════════
+# Sidebar — LLM & Enbedding Model Selection 
+# ═══════════════════════════════════════════════════════
+with st.sidebar:
+    st.header(":material/psychology: LLM & Embedding Model Name")
+    model_name = st.text_input(label="",placeholder="default: Qwen/Qwen2.5-1.5B-Instruct ",label_visibility="collapsed")
+    embd_model_name = st.text_input(label="",placeholder="default: sentence-transformers/all-MiniLM-L6-v2",label_visibility="collapsed")
+    
+    download_and_run = st.button("Download Model")
+    
+    if (model_name or embd_model_name) and download_and_run:
+        if model_name is not None:
+            LLM_MODEL_NAME = model_name
+        if embd_model_name is not None:
+            EMBED_MODEL_NAME = embd_model_name
+    
+    if download_and_run and not (model_name or embd_model_name):
+        st.toast("🚨 Enter the LLM or Embedding Model Name Before Downloading")
+        
 
 # ═══════════════════════════════════════════════════════
 # Sidebar — Paper management

@@ -1,7 +1,30 @@
-Refrence/
+# Python bytecode
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# IDE / Editor
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Project-specific — generated / downloaded data
 docsContainer/
-task.txt
-**/*/adapters/**/index.ts
-/__pycache__/**
+evaluation/evaluation_results.json
+
+# Jupyter notebook testing
 testing.ipynb
 
+# Task notes
+task.txt
+
+# Reference material
+Refrence/
