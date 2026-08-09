@@ -5,7 +5,7 @@ A fully local Retrieval-Augmented Generation (RAG) chatbot for research papers. 
 ### Note : if streamlit app is not working so you can try by uisng smaller model and if it is still not working  then test by clone the repo on you personal device and run the app.py by using command:
 ```python
 pip install -r requirments.txt 
-streamlit run python 
+streamlit run app.py
 ```    
 ---
 
