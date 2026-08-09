@@ -1,0 +1,7 @@
+Refrence/
+docsContainer/
+task.txt
+**/*/adapters/**/index.ts
+/__pycache__/**
+testing.ipynb
+
