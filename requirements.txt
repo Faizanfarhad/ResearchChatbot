@@ -8,3 +8,4 @@ torch>=2.13.0
 selenium>=4.46.0
 pypdf>=6.15.0
 streamlit>=1.61.1
+torchvision>=0.28.0
