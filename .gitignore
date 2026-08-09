@@ -16,6 +16,9 @@ env/
 .DS_Store
 Thumbs.db
 
+#Agent skills 
+.agents/
+
 # Project-specific — generated / downloaded data
 docsContainer/
 evaluation/evaluation_results.json
