@@ -1,0 +1,22 @@
+[project]
+name = "ResearchChatbot"
+version = "0.1.0"
+description = "Local RAG chatbot for research papers — FAISS + Qwen 2.5 + Streamlit"
+requires-python = ">=3.10"
+dependencies = [
+    "sentence_transformers>=5.6.0",
+    "numpy>=2.5.1",
+    "faiss-cpu>=1.14.3",
+    "nltk>=3.10.0",
+    "pymupdf>=1.28.0",
+    "regex>=2026.7.10",
+    "torch>=2.13.0",
+    "selenium>=4.46.0",
+    "pypdf>=6.15.0",
+    "streamlit>=1.61.1",
+    "llama-index-core>=0.12.0",
+]
+
+[build-system]
+requires = ["setuptools>=75.8.2", "wheel"]
+build-backend = "setuptools.build_meta"
