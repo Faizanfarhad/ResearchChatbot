@@ -37,7 +37,8 @@ flowchart TD
 
     %% ── Query ──
     INDEX_READY --> USER_Q["❓ User question<br/>(st.chat_input)"]
-    USER_Q --> Q_EMBED["embedding_model.encode()<br/>+ normalize_embeddings=True"]
+    USER_Q --> Q_CLEAN["🧹 clean_text(question)<br/>normalize + validate"]
+    Q_CLEAN --> Q_EMBED["embedding_model.encode()<br/>+ normalize_embeddings=True"]
     Q_EMBED --> SEARCH["faiss_index.search(top_k)<br/>inner product → cosine scores"]
     SEARCH --> RETRIEVED["📋 Top-k retrieved chunks<br/>(rank, score, chunk_id, text)"]
 
@@ -46,8 +47,22 @@ flowchart TD
     GEN_CHECK -->|"No"| ANSWER_EMPTY["answer = ''<br/>(retrieval-only mode)"]
     GEN_CHECK -->|"Yes"| FORMAT["_format_context()<br/>[Chunk X] text blocks"]
     FORMAT --> PROMPT["Prompt template:<br/>Context + Question + Instructions"]
-    PROMPT --> LLM["Qwen2.5-1.5B-Instruct<br/>(transformers AutoModel)"]
-    LLM --> STRIP["Strip prompt from output"]
+
+    %% ── 4-bit Quantization Flow ──
+    PROMPT --> QUANT_CHECK{"Model in<br/>_model_cache?"}
+    QUANT_CHECK -->|"No (first call)"| BNB_CONFIG["BitsAndBytesConfig<br/>load_in_4bit=True<br/>bnb_4bit_compute_dtype=float16"]
+    BNB_CONFIG --> DOWNLOAD["AutoModelForCausalLM<br/>.from_pretrained()<br/>+ quantization_config"]
+    DOWNLOAD --> EVAL_MODE_SET["model.eval()"]
+    EVAL_MODE_SET --> STORE["Store in _model_cache<br/>key=(model_name, device)"]
+
+    QUANT_CHECK -->|"Yes (cached)"| REUSE["Reuse cached<br/>tokenizer + 4-bit model"]
+
+    STORE --> TOKENIZE
+    REUSE --> TOKENIZE["tokenizer(prompt_text)<br/>return_tensors='pt' → device"]
+
+    TOKENIZE --> GENERATE["model.generate()<br/>max_new_tokens, temp=0.7<br/>top_p=0.9, torch.no_grad()"]
+    GENERATE --> DECODE["tokenizer.decode()<br/>skip_special_tokens=True"]
+    DECODE --> STRIP["Strip prompt from output<br/>response[len(prompt):]"]
     STRIP --> ANSWER["✅ Generated answer<br/>with [Chunk X] citations"]
 
     ANSWER_EMPTY --> RETURN["Return dict:<br/>question, answer, source_chunks, total_sources"]
@@ -72,7 +87,35 @@ flowchart TD
     style RAW_TEXT fill:#FF9800,color:#fff
     style STREAMLIT fill:#E91E63,color:#fff
     style EVAL_OUT fill:#2196F3,color:#fff
+    style BNB_CONFIG fill:#FF5722,color:#fff
+    style DOWNLOAD fill:#FF5722,color:#fff
+    style STORE fill:#607D8B,color:#fff
+    style REUSE fill:#607D8B,color:#fff
 ```
+
+## 4-bit Quantization Detail
+
+The generator uses **NF4 (NormalFloat4)** quantization via `BitsAndBytesConfig`:
+
+```
+Full model (~3 GB float16)
+        │
+        ▼
+BitsAndBytesConfig(load_in_4bit=True)
+        │
+        ▼
+4-bit quantized model (~0.75 GB)
+        │
+        ▼
+_model_cache[(model_name, device)] ← stored once, reused forever
+```
+
+| Aspect | Without quantization | With 4-bit NF4 |
+|--------|---------------------|----------------|
+| Memory (Qwen 2.5 1.5B) | ~3 GB (float16) | ~0.75 GB (4-bit) |
+| Inference speed | Fast (native dtype) | Slightly slower (dequant on-the-fly) |
+| Quality loss | None | Minimal (<1% perplexity increase) |
+| Deployable on Render free? | ❌ OOM | ⚠️ Tight but possible |
 
 ## Component dependency tree
 
@@ -89,7 +132,9 @@ app.py (Streamlit Dashboard)
 │   │   └── faiss.IndexFlatIP
 │   ├── RagPipeline/tools/retrieve_top_k.py (retrieve_top_k)
 │   └── RagPipeline/tools/generator.py (create_generator)
-│       └── transformers.AutoModelForCausalLM (Qwen2.5-1.5B)
+│       ├── transformers.AutoModelForCausalLM (Qwen2.5-1.5B)
+│       ├── transformers.BitsAndBytesConfig (4-bit NF4 quantization)
+│       └── RagPipeline/tools/text_cleaner.py (clean_text)
 ├── document_extractor/pdf_extractor_from_arxiv.py (ExtractPdf)
 │   └── selenium + urllib
 └── document_extractor/pdf_downloader.py (download_pdf)
@@ -108,5 +153,7 @@ evaluation/evaluation.py (Eval harness)
 | 4. Embed | TextNode list | float32 np.array (N, 384) | `SentenceTransformer` |
 | 5. Index | Embedding matrix | FAISS IndexFlatIP | `faiss` |
 | 6. Retrieve | User question | Top-k chunks (rank, score, text) | `faiss_index.search()` |
-| 7. Generate | Question + retrieved chunks | Answer with [Chunk X] citations | `Qwen2.5-1.5B-Instruct` |
+| 7a. Quantize | Full-precision weights | 4-bit NF4 weights (~75% smaller) | `BitsAndBytesConfig(load_in_4bit=True)` |
+| 7b. Load/Cache | Model ID + device | Tokenizer + quantized model | `_load_model()` with `_model_cache` |
+| 7c. Generate | Question + retrieved chunks | Answer with [Chunk X] citations | `Qwen2.5-1.5B-Instruct` (4-bit) |
 | 8. Evaluate | 20 test questions | Retrieval + answer metrics JSON | `evaluation.py` |

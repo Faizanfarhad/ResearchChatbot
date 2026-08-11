@@ -1,4 +1,4 @@
-from transformers import AutoTokenizer, AutoModelForCausalLM
+from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 import torch
 from RagPipeline.tools.text_cleaner import clean_text
 # Module-level cache — avoids reloading models on every call
@@ -8,11 +8,13 @@ _model_cache = {}
 def _load_model(model_name: str, device: str):
     """Lazy-load tokenizer + model, cached per (model_name, device) key."""
     cache_key = (model_name, device)
+    quantization_config = BitsAndBytesConfig(load_in_4bit=True)
     if cache_key not in _model_cache:
         tokenizer = AutoTokenizer.from_pretrained(model_name)
         model = AutoModelForCausalLM.from_pretrained(
             model_name,
             trust_remote_code=True,
+            quantization_config=quantization_config, 
             torch_dtype=torch.float16 if device == 'cuda' else torch.float32,
         ).to(device)
         model.eval()
@@ -101,7 +103,7 @@ def create_generator(
             temperature=0.7,
             top_p=0.9,
         )
-
+    
     response = tokenizer.decode(outputs[0], skip_special_tokens=True)
     
     # Strip the prompt portion from the decoded output
