@@ -111,7 +111,7 @@ pip install -r requirements.txt
 
 The first time you run the app, these models are downloaded from HuggingFace:
 - **Embedding:** `sentence-transformers/all-MiniLM-L6-v2` (~90 MB)
-- **LLM:** `Qwen/Qwen2.5-1.5B-Instruct` (~3 GB)
+- **LLM:** `Qwen/Qwen2.5-1.5B-Instruct` (~3 GB) After 4-bit Quantitized (~1.1 GB)
 
 Subsequent runs use the cached models (stored at `~/.cache/huggingface/`).
 
