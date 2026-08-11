@@ -10,3 +10,5 @@ pypdf>=6.15.0
 streamlit>=1.61.1
 torchvision>=0.28.0
 llama-index-core>=0.14.23
+accelerate>=1.1.0
+bitsandbytes>=0.50.0
